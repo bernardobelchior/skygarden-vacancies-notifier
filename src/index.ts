@@ -85,6 +85,6 @@ async function getAll() {
     return entries;
 }
 
-setInterval(() => getAll(), 1 * 60 * 1000);
+setInterval(() => getAll(), 3 * 60 * 1000);
 
 getAll();
