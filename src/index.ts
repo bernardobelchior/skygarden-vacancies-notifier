@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as Table from 'cli-table';
+import * as notifier from 'node-notifier';
 
 interface TicketSpace {
     name: string;
@@ -43,18 +44,33 @@ async function get(startDate: Date, endDate: Date): Promise<Event[]> {
     }));
 }
 
+function getEventsWithTicketsLeft(entries: Event[]): Event[] {
+    return entries.filter(r => r.ticketsLeft > 0)
+}
+
 function createTableFromEntries(entries: Event[]): Table {
     const table = new Table({
         head: ['Date', 'Time', 'Tickets Left', 'Updated At']
     });
 
-    const ticketsLeft = entries.filter(r => r.ticketsLeft > 0).map(r =>
+    const ticketsLeft = getEventsWithTicketsLeft(entries).map(r =>
         [r.datetime.toLocaleDateString(), r.datetime.toLocaleTimeString(), r.ticketsLeft, r.updated.toLocaleTimeString()]
     );
 
     Array.prototype.push.apply(table, ticketsLeft);
 
     return table;
+}
+
+function notifyIfTicketsLeft(entries: Event[]) {
+    const eventsWithTicketsLeft = getEventsWithTicketsLeft(entries);
+
+    if (eventsWithTicketsLeft.length > 0) {
+        notifier.notify({
+            title: 'Sky Garden: Tickets Available!',
+            message: 'There are tickets available for Sky Garden, check your terminal.',
+        });
+    }
 }
 
 async function getAll() {
@@ -76,10 +92,12 @@ async function getAll() {
         twoDaysFromLastDate.setDate(lastDate.getDate() + 2);
 
         const table = createTableFromEntries(entries);
+        notifyIfTicketsLeft(newEntries);
 
         console.clear();
         console.log(`From ${startDate.toLocaleDateString()} to ${twoDaysFromLastDate.toLocaleDateString()}\n`);
         console.log(table.toString());
+        console.log('Book here: https://skygarden.london/booking');
     } while (newEntries.length > 0);
 
     return entries;
